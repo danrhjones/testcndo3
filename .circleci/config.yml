@@ -108,3 +108,5 @@ jobs:
           command: |
             cd backend 
             npm audit --audit-level=critical
+
+# VS Code Extension Version: 1.5.1
