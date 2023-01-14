@@ -1,0 +1,110 @@
+version: 2.1
+
+workflows:
+  default:
+    jobs:
+      - build-frontend
+      - build-backend
+      - test-frontend:
+          requires: [build-frontend]
+      - test-backend:
+          requires: [build-backend]
+      - audit-scan-frontend:
+          requires: [build-frontend]
+      - audit-scan-backend:
+          requires: [build-backend]
+
+node-docker-image: &node-docker-image
+   docker:
+      - image: circleci/node:13.8.0
+
+jobs:
+  build-frontend:
+    <<: *node-docker-image
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [frontend-build]
+      - run:
+          name: Install dependancies
+          command: |
+            cd frontend
+            npm install
+      - run:
+          name: Build front-end
+          command: |
+            cd frontend
+            npm run build
+      - save_cache:
+          paths: [frontend/node_modules]
+          key: frontend-build
+
+  build-backend:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [backend-build]
+      - run:
+          name: Install dependancies
+          command: |
+            cd backend
+            npm install
+      - run:
+          name: Back-end build
+          command: |
+            cd backend 
+            npm run build
+      - save_cache:
+          paths: [backend/node_modules]
+          key: backend-build
+
+  test-frontend:
+    <<: *node-docker-image
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [frontend-build]
+      - run:
+          name: Tests
+          command: |
+            cd frontend 
+            npm run test
+
+  test-backend:
+    docker:
+      - image: circleci/node:13.8.0
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [backend-build]
+      - run:
+          name: Tests
+          command: |
+            cd backend 
+            npm run test
+
+  audit-scan-frontend:
+    <<: *node-docker-image
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [frontend-build]
+      - run:
+          name: Run audit
+          command: |
+            cd frontend 
+            npm audit --audit-level=critical
+
+  audit-scan-backend:
+    <<: *node-docker-image
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [backend-build]
+      - run:
+          name: Run audit
+          command: |
+            cd backend 
+            npm audit --audit-level=critical
